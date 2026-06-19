@@ -3153,7 +3153,7 @@ const HTML_CONTENT = `
             loginBtn.textContent = '退出登录';
             adminBtn.style.display = 'inline-block';
             if (isAdmin) {
-                adminBtn.textContent = '离开设置';
+                adminBtn.textContent = '退出设置';
             } else {
                 adminBtn.textContent = '设置';
             }
@@ -3267,7 +3267,7 @@ const HTML_CONTENT = `
 
             addRemoveControls.style.display = 'none';
             await reloadCardsAsAdmin();
-            logAction('离开设置');
+            logAction('退出设置');
             await customAlert('设置已保存', '设置完成');
         }
 
