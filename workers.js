@@ -2014,7 +2014,7 @@ const HTML_CONTENT = `
                 <label for="private-note-input">私密备注</label>
                 <textarea id="private-note-input" placeholder="登录后可见，可选"></textarea>
                 <label for="icon-input">图标</label>
-                <input type="text" id="icon-input" placeholder="可选">
+                <input type="text" id="icon-input" placeholder="可选，留空自动获取">
                 <label for="category-select">选择分类</label>
                 <select id="category-select"></select>
                 <div class="private-link-container">
@@ -2668,6 +2668,41 @@ const HTML_CONTENT = `
         });
     }
 
+    async function resolveAutoFaviconUrl(targetUrl) {
+        const parsedUrl = new URL(targetUrl);
+        const fallbackUrl = parsedUrl.origin + '/favicon.ico';
+
+        try {
+            const response = await fetch(parsedUrl.toString());
+
+            if (!response.ok) {
+                return fallbackUrl;
+            }
+
+            const html = await response.text();
+            const iconPatterns = [
+                /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
+                /<link[^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
+                /<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/i
+            ];
+
+            for (const pattern of iconPatterns) {
+                const match = html.match(pattern);
+                if (match && match[1]) {
+                    try {
+                        return new URL(match[1], parsedUrl.origin).href;
+                    } catch {
+                        continue;
+                    }
+                }
+            }
+        } catch {
+            // 忽略解析失败，使用默认 favicon 地址
+        }
+
+        return fallbackUrl;
+    }
+
     // 创建卡片
     function createCard(link, container) {
         const card = document.createElement('div');
@@ -2693,14 +2728,14 @@ const HTML_CONTENT = `
         const icon = document.createElement('img');
         icon.className = 'card-icon';
 
-        // 使用自定义图标或回退到favicon提取服务
+        // 使用自定义图标或回退到站点自己的 favicon
         icon.src = (
             !link.icon ||
             typeof link.icon !== 'string' ||
             !link.icon.trim() ||
             !isValidUrl(link.icon)
         )
-            ? 'https://www.faviconextractor.com/favicon/' + extractDomain(link.url)
+            ? '/api/favicon?url=' + encodeURIComponent(link.url)
             : link.icon;
 
         icon.alt = 'Website Icon';
@@ -4266,6 +4301,45 @@ const HTML_CONTENT = `
 </html>
 `;
 
+async function resolveAutoFaviconCandidates(targetUrl) {
+    const parsedUrl = new URL(targetUrl);
+    const candidates = [];
+
+    try {
+        const response = await fetch(parsedUrl.toString());
+
+        if (response.ok) {
+            const html = await response.text();
+            const iconPatterns = [
+            /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
+            /<link[^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
+            /<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/i
+            ];
+
+            for (const pattern of iconPatterns) {
+                const match = html.match(pattern);
+                if (match && match[1]) {
+                    try {
+                        candidates.push(new URL(match[1], parsedUrl.origin).href);
+                    } catch {
+                        continue;
+                    }
+                }
+            }
+        }
+    } catch {
+        // 忽略解析失败，使用默认 favicon 地址
+    }
+
+    candidates.push(
+        parsedUrl.origin + '/favicon.ico',
+        'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(parsedUrl.hostname) + '&sz=64',
+        'https://icons.duckduckgo.com/ip3/' + encodeURIComponent(parsedUrl.hostname) + '.ico'
+    );
+
+    return candidates;
+}
+
 // 常量时间比较函数，防止时序攻击
 function constantTimeCompare(a, b) {
     if (a.length !== b.length) return false;
@@ -4444,6 +4518,37 @@ export default {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      if (url.pathname === '/api/favicon') {
+        const targetUrl = url.searchParams.get('url');
+        if (!targetUrl) {
+          return new Response('Missing url', { status: 400 });
+        }
+
+        try {
+          const candidates = await resolveAutoFaviconCandidates(targetUrl);
+          for (const faviconUrl of candidates) {
+            try {
+              const upstream = await fetch(faviconUrl);
+              const contentType = upstream.headers.get('content-type') || '';
+              if (upstream.ok && contentType.startsWith('image/')) {
+                return new Response(upstream.body, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': contentType,
+                    'Cache-Control': 'public, max-age=86400'
+                  }
+                });
+              }
+            } catch {
+              // Try the next candidate.
+            }
+          }
+          return new Response('Favicon unavailable', { status: 404 });
+        } catch {
+          return new Response('Favicon unavailable', { status: 404 });
+        }
       }
 
       if (url.pathname === '/api/saveOrder' && request.method === 'POST') {

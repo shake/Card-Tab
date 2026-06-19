@@ -16,6 +16,8 @@ assertAbsent(/WEATHER_API|weather-mini|\/api\/weather/, 'weather feature should 
 assertPresent(/privateNote/, 'private notes should be represented in link data');
 assertPresent(/sanitizeLinkForPublic|redactPrivateNote|privateNote:\s*undefined/, 'public responses should redact private notes');
 assertPresent(/note-modal|showNoteModal|copyPrivateNote/, 'private note modal and copy behavior should exist');
+assertPresent(/\/api\/favicon|resolveAutoFaviconUrl/, 'automatic favicon proxy should exist');
+assertAbsent(/faviconextractor|api\.iowen/, 'old external favicon services should not be used');
 
 assertPresent(/currentCategoryView/, 'category tab view state should exist');
 assertPresent(/setCategoryView/, 'category navigation should switch views instead of scrolling');
