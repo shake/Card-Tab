@@ -12,6 +12,7 @@ function assertPresent(pattern, message) {
 }
 
 assertAbsent(/WEATHER_API|weather-mini|\/api\/weather/, 'weather feature should be removed');
+assertAbsent(/hitokoto|search-engine-select|search-container|search-button/, 'top quote and search bar should be removed');
 
 assertPresent(/privateNote/, 'private notes should be represented in link data');
 assertPresent(/sanitizeLinkForPublic|redactPrivateNote|privateNote:\s*undefined/, 'public responses should redact private notes');

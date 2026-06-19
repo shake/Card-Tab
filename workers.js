@@ -38,7 +38,7 @@ const HTML_CONTENT = `
         z-index: 1000;
         padding: 10px;
         transition: all 0.3s ease;
-        height: 150px;
+        height: 110px;
         box-shadow: none; /* 移除阴影 */
     }
 
@@ -130,36 +130,6 @@ const HTML_CONTENT = `
 
     body.dark-theme .fixed-elements h3 {
         color: #e3e3e3;
-    }
-
-    /* 一言模块样式 */
-    #hitokoto {
-        margin: 5px 0 15px;
-        font-size: 14px;
-        color: #888;
-        font-style: italic;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        transition: all 0.3s ease;
-    }
-
-    #hitokoto a {
-        color: #43b883;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-
-    #hitokoto a:hover {
-        color: #35a674;
-    }
-
-    body.dark-theme #hitokoto {
-        color: #a0a0a0;
-    }
-
-    body.dark-theme #hitokoto a {
-        color: #5d7fb9;
     }
 
     /* 中心内容样式 */
@@ -649,7 +619,7 @@ const HTML_CONTENT = `
 
     /* 主要内容区域样式 */
     .content {
-        margin-top: 170px;
+        margin-top: 125px;
         padding: 10px;
         max-width: 1600px;
         margin-left: auto;
@@ -659,134 +629,6 @@ const HTML_CONTENT = `
 
     .loading .content {
         opacity: 0.6;
-    }
-
-    /* 搜索栏样式 */
-    .search-container {
-        margin-top: 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-    }
-
-    .search-bar {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 10px;
-        width: 100%;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e0e0e0;
-        transition: all 0.3s ease;
-    }
-
-    .search-bar:focus-within {
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-        border-color: #43b883;
-    }
-
-    .search-bar select {
-        border: none;
-        background-color: #f4f7fa;
-        padding: 10px 15px;
-        font-size: 14px;
-        color: #43b883;
-        width: 120px;
-        outline: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="6" viewBox="0 0 12 6"><path fill="%2343b883" d="M0 0l6 6 6-6z"/></svg>');
-        background-repeat: no-repeat;
-        background-position: right 10px center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border-radius: 0;
-    }
-
-    /* 下拉菜单样式 */
-    select option {
-        background-color: #fff;
-        color: #333;
-        padding: 10px;
-        font-size: 14px;
-        white-space: nowrap;
-        overflow: visible;
-    }
-
-    /* 暗色主题搜索栏样式 */
-    body.dark-theme .search-bar {
-        border-color: #323642;
-        background-color: #1e2128;
-    }
-
-    body.dark-theme .search-bar select {
-        background-color: #252830;
-        color: #5d7fb9;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="6" viewBox="0 0 12 6"><path fill="%235d7fb9" d="M0 0l6 6 6-6z"/></svg>');
-    }
-
-    body.dark-theme .search-bar input {
-        background-color: #252830;
-        color: #e3e3e3;
-    }
-
-    body.dark-theme .search-bar button {
-        background-color: #5d7fb9;
-    }
-
-    body.archive-theme .search-bar {
-        border-color: #d8c28a;
-        background-color: #fff9e8;
-    }
-
-    body.archive-theme .search-bar select,
-    body.archive-theme .search-bar input {
-        background-color: #fff9e8;
-        color: #2f2a1f;
-    }
-
-    body.archive-theme .search-bar select {
-        color: #7a5419;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="6" viewBox="0 0 12 6"><path fill="%23b7791f" d="M0 0l6 6 6-6z"/></svg>');
-    }
-
-    body.archive-theme .search-bar button {
-        background-color: #b7791f;
-    }
-
-    body.dark-theme select option {
-        background-color: #252830;
-        color: #e3e3e3;
-        white-space: nowrap;
-        overflow: visible;
-    }
-
-    .search-bar input {
-        flex: 1;
-        border: none;
-        padding: 10px 15px;
-        font-size: 14px;
-        background-color: #fff;
-        outline: none;
-    }
-
-    .search-bar button {
-        border: none;
-        background-color: #43b883;
-        color: white;
-        padding: 0 20px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-
-    .search-bar button:hover {
-        background-color: #35a674;
     }
 
     /* 分类按钮容器样式 - 移至固定元素区域内 */
@@ -1268,20 +1110,12 @@ const HTML_CONTENT = `
             position: fixed; /* 恢复固定定位，确保分类按钮位置正确 */
             padding: 8px 12px 5px 12px; /* 紧凑的内边距 */
             height: auto;
-            min-height: 140px; /* 增加最小高度，确保有足够空间 */
+            min-height: 110px; /* 保留分类按钮所需空间 */
             box-shadow: none; /* 移除阴影 */
         }
 
         body.dark-theme .fixed-elements {
             box-shadow: none; /* 移除阴影 */
-        }
-
-        /* 移动端一言样式调整 - 紧凑显示 */
-        #hitokoto {
-            margin: 3px 0 6px 0; /* 紧凑的上下边距 */
-            font-size: 12px; /* 减小字体 */
-            line-height: 1.3; /* 紧凑行高 */
-            padding: 0 8px; /* 左右内边距 */
         }
 
         .category-buttons-container {
@@ -1310,7 +1144,7 @@ const HTML_CONTENT = `
         }
 
         .content {
-            margin-top: 150px; /* 增加顶部边距，适配更高的固定元素 */
+            margin-top: 120px; /* 适配更紧凑的顶部区域 */
             margin-bottom: 100px; /* 为底部的分类按钮和版权信息留出空间 */
             padding: 15px; /* 保持内边距 */
             transition: opacity 0.3s ease;
@@ -1327,32 +1161,6 @@ const HTML_CONTENT = `
 
         .loading .content {
             opacity: 0.6;
-        }
-
-        /* 移动端搜索容器样式 */
-        .search-container {
-            margin-top: 15px; /* 增加上边距，与右上角按钮拉开距离 */
-        }
-
-        .search-bar {
-            flex-wrap: nowrap;
-            max-width: 320px; /* 限制移动端搜索栏宽度 */
-            width: 90%; /* 相对宽度 */
-            margin: 6px auto 8px auto; /* 居中显示 */
-        }
-
-        .search-bar select {
-            width: 80px; /* 缩小选择框宽度，参考佬友修改版 */
-            flex: 0 0 auto;
-            font-size: 12px; /* 减小字体以适应更小宽度 */
-        }
-
-        .search-bar input {
-            flex: 1;
-        }
-
-        .search-bar button {
-            flex: 0 0 auto;
         }
 
         .admin-controls input,
@@ -1914,24 +1722,6 @@ const HTML_CONTENT = `
 <body>
     <div class="fixed-elements">
         <div class="center-content">
-            <!-- 一言模块 -->
-            <p id="hitokoto">
-                <a href="#" id="hitokoto_text"></a>
-            </p>
-            <script src="https://v1.hitokoto.cn/?encode=js&select=%23hitokoto" defer></script>
-            <!-- 搜索栏 -->
-            <div class="search-container">
-                <div class="search-bar">
-                    <select id="search-engine-select">
-                        <option value="baidu">百度</option>
-                        <option value="bing">必应</option>
-                        <option value="google">谷歌</option>
-                        <option value="duckduckgo">DuckDuckGo</option>
-                    </select>
-                    <input type="text" id="search-input" placeholder="">
-                    <button id="search-button">🔍</button>
-                </div>
-            </div>
             <div id="category-buttons-container" class="category-buttons-container"></div>
         </div>
         <!-- 右上角控制区域 -->
@@ -2097,53 +1887,12 @@ const HTML_CONTENT = `
     <div id="custom-tooltip"></div>
 
     <script>
-    // 搜索引擎配置
-    const searchEngines = {
-        baidu: "https://www.baidu.com/s?wd=",
-        bing: "https://www.bing.com/search?q=",
-        google: "https://www.google.com/search?q=",
-        duckduckgo: "https://duckduckgo.com/?q="
-    };
-
-    let currentEngine = "baidu";
-
     // 日志记录函数
     function logAction(action, details) {
         const timestamp = new Date().toISOString();
         const logEntry = timestamp + ': ' + action + ' - ' + JSON.stringify(details);
         console.log(logEntry);
     }
-
-    // 设置当前搜索引擎
-    function setActiveEngine(engine) {
-        currentEngine = engine;
-        document.getElementById('search-engine-select').value = engine;
-        logAction('设置搜索引擎', { engine });
-    }
-
-    // 搜索引擎选择框变更事件
-    document.getElementById('search-engine-select').addEventListener('change', function() {
-        setActiveEngine(this.value);
-    });
-
-    // 搜索按钮点击事件
-    document.getElementById('search-button').addEventListener('click', () => {
-        const query = document.getElementById('search-input').value;
-        if (query) {
-            logAction('执行搜索', { engine: currentEngine, query });
-            window.open(searchEngines[currentEngine] + encodeURIComponent(query), '_blank');
-        }
-    });
-
-    // 搜索输入框回车事件
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('search-button').click();
-        }
-    });
-
-    // 初始化搜索引擎
-    setActiveEngine(currentEngine);
 
     // 全局变量
     let publicLinks = [];
