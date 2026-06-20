@@ -29,3 +29,5 @@ assertPresent(/\.\.\.originalLink|Object\.assign\(\{\},\s*originalLink/, 'drag s
 
 assertPresent(/findDuplicateLink|duplicate/i, 'duplicate URL warning should exist');
 assertPresent(/archive-theme|Archive Yellow|archive yellow/i, 'archive yellow theme should exist');
+assertPresent(/exportJsonBackup|导出JSON/, 'JSON export should exist');
+assertPresent(/triggerJsonImport|handleJsonImport|json-import-input/, 'JSON import should exist');

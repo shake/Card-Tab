@@ -616,6 +616,8 @@ const HTML_CONTENT = `
     .remove-btn { order: 2; }
     .category-btn { order: 3; }
     .remove-category-btn { order: 4; }
+    .export-btn { order: 5; }
+    .import-btn { order: 6; }
 
     /* 主要内容区域样式 */
     .content {
@@ -1777,7 +1779,24 @@ const HTML_CONTENT = `
                     <path d="M24 21v3m0 8v3m4.8-12-2.1 2.1M20.8 31l-2.1 2.1M19 23l2.1 2.1M27 31l2.1 2.1M17 28h3M28 28h3" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
+
+            <button class="round-btn export-btn" onclick="exportJsonBackup()" title="导出JSON">
+                <svg viewBox="0 0 48 48" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 8v20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M15 19l9 9 9-9" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M10 36h28" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+            </button>
+
+            <button class="round-btn import-btn" onclick="triggerJsonImport()" title="导入JSON">
+                <svg viewBox="0 0 48 48" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 40V20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M15 29l9-9 9 9" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M10 12h28" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+            </button>
         </div>
+        <input type="file" id="json-import-input" accept=".json,application/json" style="display: none;">
 
 
 
@@ -3165,8 +3184,197 @@ const HTML_CONTENT = `
 
     // 打开GitHub仓库
     function openGitHub() {
-        window.open('https://github.com/hmhm2022/Card-Tab', '_blank');
+        window.open('https://github.com/shake/Card-Tab', '_blank');
         logAction('访问GitHub仓库');
+    }
+
+    function formatJsonExportDate(date = new Date()) {
+        const pad = (value) => String(value).padStart(2, '0');
+        return [
+            date.getFullYear(),
+            pad(date.getMonth() + 1),
+            pad(date.getDate())
+        ].join('-');
+    }
+
+    function buildJsonBackupPayload() {
+        return {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            userId: 'testUser',
+            links: [...publicLinks, ...privateLinks],
+            categories: categories
+        };
+    }
+
+    function normalizeImportedLink(link) {
+        if (!link || typeof link !== 'object') {
+            return null;
+        }
+
+        const normalizedUrl = normalizeUrl(link.url || '');
+        const normalizedName = typeof link.name === 'string' ? link.name.trim() : '';
+        const normalizedCategory = typeof link.category === 'string' ? link.category.trim() : '';
+
+        if (!normalizedName || !normalizedUrl || !normalizedCategory) {
+            return null;
+        }
+
+        return {
+            name: normalizedName,
+            url: normalizedUrl,
+            tips: typeof link.tips === 'string' ? link.tips : '',
+            privateNote: typeof link.privateNote === 'string' ? link.privateNote : '',
+            icon: typeof link.icon === 'string' ? link.icon : '',
+            category: normalizedCategory,
+            isPrivate: Boolean(link.isPrivate)
+        };
+    }
+
+    function normalizeImportedCategories(rawCategories, links) {
+        const normalizedCategories = {};
+
+        if (rawCategories && typeof rawCategories === 'object' && !Array.isArray(rawCategories)) {
+            Object.keys(rawCategories).forEach(category => {
+                if (typeof category !== 'string' || !category.trim()) {
+                    return;
+                }
+                normalizedCategories[category] = [];
+            });
+        }
+
+        links.forEach(link => {
+            if (!normalizedCategories[link.category]) {
+                normalizedCategories[link.category] = [];
+            }
+            normalizedCategories[link.category].push(link);
+        });
+
+        return normalizedCategories;
+    }
+
+    function normalizeImportedBackup(data) {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+
+        const rawLinks = Array.isArray(data.links)
+            ? data.links
+            : [
+                ...(Array.isArray(data.publicLinks) ? data.publicLinks : []),
+                ...(Array.isArray(data.privateLinks) ? data.privateLinks : [])
+            ];
+        const normalizedLinks = rawLinks.map(normalizeImportedLink).filter(Boolean);
+        const normalizedCategories = normalizeImportedCategories(data.categories, normalizedLinks);
+
+        if (!normalizedLinks.length && Object.keys(normalizedCategories).length === 0) {
+            return null;
+        }
+
+        return {
+            links: normalizedLinks,
+            categories: normalizedCategories
+        };
+    }
+
+    async function exportJsonBackup() {
+        if (!await validateToken()) {
+            return;
+        }
+
+        const payload = buildJsonBackupPayload();
+        const fileName = 'Card-Tab-' + formatJsonExportDate() + '.json';
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: 'application/json;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        logAction('导出JSON', {
+            fileName,
+            linkCount: payload.links.length,
+            categoryCount: Object.keys(payload.categories).length
+        });
+        await customAlert('JSON 已导出', '导出完成');
+    }
+
+    function triggerJsonImport() {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        const input = document.getElementById('json-import-input');
+        input.value = '';
+        input.click();
+    }
+
+    async function handleJsonImport(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        if (!await validateToken()) {
+            return;
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(await file.text());
+        } catch (error) {
+            await customAlert('JSON 文件格式不正确，请检查后再导入。', '导入失败');
+            return;
+        }
+
+        const normalized = normalizeImportedBackup(parsed);
+        if (!normalized) {
+            await customAlert('这个 JSON 里没有可恢复的书签数据。', '导入失败');
+            return;
+        }
+
+        const confirmed = await customConfirm('导入会覆盖当前全部数据，确定继续吗？', '确定导入', '取消');
+        if (!confirmed) {
+            return;
+        }
+
+        showLoading('正在导入 JSON...');
+        try {
+            const response = await fetch('/api/saveOrder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': localStorage.getItem('authToken')
+                },
+                body: JSON.stringify({
+                    userId: 'testUser',
+                    links: normalized.links,
+                    categories: normalized.categories
+                }),
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error('保存失败');
+            }
+
+            await reloadCardsAsAdmin();
+            logAction('导入JSON', {
+                fileName: file.name,
+                linkCount: normalized.links.length,
+                categoryCount: Object.keys(normalized.categories).length
+            });
+            hideLoading();
+            await customAlert('JSON 已导入并覆盖当前数据。', '导入完成');
+        } catch (error) {
+            hideLoading();
+            await customAlert('导入失败，请确认 JSON 内容后重试。', '导入失败');
+        }
     }
 
     // 切换书签搜索下拉框
@@ -3198,6 +3406,8 @@ const HTML_CONTENT = `
             performLogin();
         }
     });
+
+    document.getElementById('json-import-input').addEventListener('change', handleJsonImport);
 
     // 切换设置状态
     async function toggleAdminMode() {
