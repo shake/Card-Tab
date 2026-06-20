@@ -4541,7 +4541,8 @@ export default {
             if (isValid) {
                 // 允许的有效期白名单（分钟）：15分钟、1小时、1天、7天、30天、永久
                 const ALLOWED_EXPIRY_VALUES = [15, 60, 1440, 10080, 43200, -1];
-                const defaultExpiry = parseInt(env.TOKEN_EXPIRY_MINUTES) || 30;
+                const configuredExpiry = parseInt(env.TOKEN_EXPIRY_MINUTES);
+                const defaultExpiry = Number.isInteger(configuredExpiry) ? configuredExpiry : -1;
 
                 // 验证客户端传入的有效期是否在白名单中
                 let expiryMinutes = defaultExpiry;
