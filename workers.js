@@ -329,104 +329,6 @@ const HTML_CONTENT = `
         color: #888;
     }
 
-    /* 登录弹窗样式 */
-    .login-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-        backdrop-filter: blur(3px);
-    }
-
-    .login-modal-content {
-        background-color: white;
-        padding: 25px;
-        border-radius: 10px;
-        width: 300px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        animation: modalFadeIn 0.3s ease;
-    }
-
-    @keyframes modalFadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .login-modal h3 {
-        margin: 0 0 20px 0;
-        color: #333;
-        text-align: center;
-        font-size: 18px;
-    }
-
-    .login-modal input {
-        width: 100%;
-        margin-bottom: 15px;
-        padding: 10px;
-        border: 1px solid #e0e0e0;
-        border-radius: 5px;
-        font-size: 14px;
-        transition: all 0.3s ease;
-        box-sizing: border-box;
-    }
-
-    .login-modal input:focus {
-        border-color: #43b883;
-        box-shadow: 0 0 0 2px rgba(67, 184, 131, 0.2);
-        outline: none;
-    }
-
-    .login-modal-buttons {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-    }
-
-    .login-modal button {
-        background-color: #43b883;
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 13px;
-    }
-
-    .login-modal button:hover {
-        background-color: #35a674;
-    }
-
-    .login-modal button.cancel {
-        background-color: #f0f0f0;
-        color: #333;
-    }
-
-    .login-modal button.cancel:hover {
-        background-color: #e0e0e0;
-    }
-
-    body.dark-theme .login-modal-content {
-        background-color: #252830;
-        color: #e3e3e3;
-    }
-
-    body.dark-theme .login-modal h3 {
-        color: #e3e3e3;
-    }
-
-    body.dark-theme .login-modal input {
-        background-color: #323642;
-        color: #e3e3e3;
-        border-color: #444;
-    }
-
     /* 悬浮提示样式 */
     @media (hover: hover) and (pointer: fine) {
         .has-tooltip {
@@ -1836,18 +1738,6 @@ const HTML_CONTENT = `
                 </div>
             </div>
         </div>
-        <!-- 登录弹窗 -->
-        <div id="login-modal" class="login-modal">
-            <div class="login-modal-content">
-                <h3>登录</h3>
-                <input type="password" id="login-password" placeholder="请输入密码">
-                <div class="login-modal-buttons">
-                    <button class="cancel" onclick="hideLoginModal()">取消</button>
-                    <button onclick="performLogin()">确定</button>
-                </div>
-            </div>
-        </div>
-
         <!-- 自定义Alert对话框 -->
         <div class="dialog-overlay top-z-index" id="custom-alert-overlay" style="display: none;">
             <div class="dialog-box" id="custom-alert-box">
@@ -1913,11 +1803,15 @@ const HTML_CONTENT = `
         console.log(logEntry);
     }
 
+    const isAdminRoute = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
+    const apiBasePath = isAdminRoute ? '/admin' : '';
+
+    let isLoggedIn = isAdminRoute;
+
     // 全局变量
     let publicLinks = [];
     let privateLinks = [];
     let isAdmin = false;
-    let isLoggedIn = false;
     let removeMode = false;
     let isRemoveCategoryMode = false;
     let isEditCategoryMode = false;
@@ -2191,24 +2085,14 @@ const HTML_CONTENT = `
 
     // 读取链接数据
     async function loadLinks() {
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-
-        // 如果已登录，从 localStorage 获取 token 并添加到请求头
-        if (isLoggedIn) {
-            const token = localStorage.getItem('authToken');
-            if (token) {
-                headers['Authorization'] = token;
-            }
-        }
-
         try {
-            const response = await fetch('/api/getLinks?userId=testUser', {
-                headers: headers
-            });
+            const response = await fetch(apiBasePath + '/api/getLinks?userId=testUser');
 
             if (!response.ok) {
+                if (response.status === 403) {
+                    await resetToPublicState('Access 登录已过期，请重新进入设置');
+                    return;
+                }
                 throw new Error("HTTP error! status: " + response.status);
             }
 
@@ -2230,8 +2114,7 @@ const HTML_CONTENT = `
             logAction('读取链接', {
                 publicCount: publicLinks.length,
                 privateCount: privateLinks.length,
-                isLoggedIn: isLoggedIn,
-                hasToken: !!localStorage.getItem('authToken')
+                isLoggedIn: isLoggedIn
             });
         } catch (error) {
             // 🔧 安全修复：避免泄露详细错误信息
@@ -2503,7 +2386,7 @@ const HTML_CONTENT = `
             !link.icon.trim() ||
             !isValidUrl(link.icon)
         )
-            ? '/api/favicon?url=' + encodeURIComponent(link.url)
+            ? apiBasePath + '/api/favicon?url=' + encodeURIComponent(link.url)
             : link.icon;
 
         icon.alt = 'Website Icon';
@@ -2654,11 +2537,10 @@ const HTML_CONTENT = `
         }));
 
         try {
-            await fetch('/api/saveOrder', {
+            const response = await fetch(apiBasePath + '/api/saveOrder', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('authToken')
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     userId: 'testUser',
@@ -2666,6 +2548,13 @@ const HTML_CONTENT = `
                     categories: categories
                 }),
             });
+            if (!response.ok) {
+                if (response.status === 403) {
+                    await resetToPublicState('Access 登录已过期，请重新进入设置');
+                    return;
+                }
+                throw new Error('Save operation failed');
+            }
             logAction('保存链接', { linkCount: allLinks.length, categoryCount: Object.keys(categories).length });
         } catch (error) {
             // 🔧 安全修复：避免泄露详细错误信息
@@ -3062,11 +2951,10 @@ const HTML_CONTENT = `
         Object.assign(categories, newCategories);
 
         try {
-            const response = await fetch('/api/saveOrder', {
+            const response = await fetch(apiBasePath + '/api/saveOrder', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('authToken')
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     userId: 'testUser',
@@ -3076,6 +2964,10 @@ const HTML_CONTENT = `
             });
             const result = await response.json();
             if (!result.success) {
+                if (response.status === 403) {
+                    await resetToPublicState('Access 登录已过期，请重新进入设置');
+                    return;
+                }
                 throw new Error('Failed to save order');
             }
             logAction('保存卡片顺序', { publicCount: newPublicLinks.length, privateCount: newPrivateLinks.length, categoryCount: Object.keys(newCategories).length });
@@ -3097,70 +2989,10 @@ const HTML_CONTENT = `
     // 处理登录按钮点击
     async function handleLoginClick() {
         if (isLoggedIn) {
-            // 如果已登录，退出登录
-            const confirmed = await customConfirm('确定要退出登录吗？', '确定', '取消');
-            if (confirmed) {
-                await logout();
-            }
+            window.location.href = '/';
         } else {
-            // 如果未登录，显示登录弹窗
-            showLoginModal();
+            window.location.href = '/admin';
         }
-    }
-
-    // 显示登录弹窗
-    function showLoginModal() {
-        document.getElementById('login-modal').style.display = 'flex';
-        document.getElementById('login-password').focus();
-    }
-
-    // 隐藏登录弹窗
-    function hideLoginModal() {
-        document.getElementById('login-modal').style.display = 'none';
-        document.getElementById('login-password').value = '';
-    }
-
-    // 执行登录
-    async function performLogin() {
-        const password = document.getElementById('login-password').value;
-        if (!password) {
-            await customAlert('请输入密码', '提示');
-            return;
-        }
-
-        try {
-            const result = await verifyPassword(password);
-            if (result.valid) {
-                isLoggedIn = true;
-                localStorage.setItem('authToken', result.token);
-                console.log('Token saved:', result.token);
-                loadLinks();
-                hideLoginModal();
-                updateLoginButton();
-                await customAlert('登录成功！', '登录');
-                logAction('登录成功');
-            } else {
-                await customAlert('密码错误', '登录失败');
-                logAction('登录失败', { reason: result.error || '密码错误' });
-            }
-        } catch (error) {
-            // 🔧 安全修复：避免泄露详细错误信息
-            console.error('Login error occurred');
-            await customAlert('登录过程出错，请重试', '错误');
-        }
-    }
-
-    // 退出登录
-    async function logout() {
-        isLoggedIn = false;
-        isAdmin = false;
-        localStorage.removeItem('authToken');
-        links = publicLinks;
-        renderSections();
-        updateLoginButton();
-        await customAlert('退出登录成功！', '退出登录');
-        updateUIState();
-        logAction('退出登录');
     }
 
     // 更新按钮状态
@@ -3169,7 +3001,7 @@ const HTML_CONTENT = `
         const adminBtn = document.getElementById('admin-btn');
 
         if (isLoggedIn) {
-            loginBtn.textContent = '退出登录';
+            loginBtn.textContent = '退出设置';
             adminBtn.style.display = 'inline-block';
             if (isAdmin) {
                 adminBtn.textContent = '退出设置';
@@ -3177,7 +3009,7 @@ const HTML_CONTENT = `
                 adminBtn.textContent = '设置';
             }
         } else {
-            loginBtn.textContent = '登录';
+            loginBtn.textContent = '设置';
             adminBtn.style.display = 'none';
         }
     }
@@ -3345,11 +3177,10 @@ const HTML_CONTENT = `
 
         showLoading('正在导入 JSON...');
         try {
-            const response = await fetch('/api/saveOrder', {
+            const response = await fetch(apiBasePath + '/api/saveOrder', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('authToken')
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     userId: 'testUser',
@@ -3400,13 +3231,6 @@ const HTML_CONTENT = `
         }
     });
 
-    // 登录密码输入框回车事件
-    document.getElementById('login-password').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performLogin();
-        }
-    });
-
     document.getElementById('json-import-input').addEventListener('change', handleJsonImport);
 
     // 切换设置状态
@@ -3422,17 +3246,16 @@ const HTML_CONTENT = `
             showLoading('正在进入设置模式...');
 
             // 在进入设置模式之前进行备份
-            try {
-                const response = await fetch('/api/backupData', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': localStorage.getItem('authToken')
-                    },
-                    body: JSON.stringify({
-                        sourceUserId: 'testUser',
-                        backupUserId: 'backup'
-                    }),
+        try {
+            const response = await fetch(apiBasePath + '/api/backupData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sourceUserId: 'testUser',
+                    backupUserId: 'backup'
+                }),
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -3805,17 +3628,6 @@ const HTML_CONTENT = `
         tooltip.style.display = 'none';
     }
 
-    // 验证密码
-    async function verifyPassword(inputPassword) {
-        const response = await fetch('/api/verifyPassword', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: inputPassword }),
-        });
-        const result = await response.json();
-        return result;
-    }
-
     // 全局变量，标记是否正在显示搜索结果
     let isShowingSearchResults = false;
 
@@ -3958,98 +3770,15 @@ const HTML_CONTENT = `
     });
 
 
-    // 前端检查是否有 token
     async function validateToken() {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            isLoggedIn = false;
-            updateUIState();
-            return false;
-        }
-
-        try {
-            const response = await fetch('/api/getLinks?userId=testUser', {
-                headers: { 'Authorization': token }
-            });
-
-            if (response.status === 401) {
-                await resetToLoginState('token已过期，请重新登录');
-                return false;
-            }
-
-            isLoggedIn = true;
-            updateUIState();
-            return true;
-        } catch (error) {
-            // 🔧 安全修复：避免泄露详细错误信息
-            console.error('Token validation failed');
-            return false;
-        }
+        return isLoggedIn;
     }
 
-    // 重置状态
-    async function resetToLoginState(message) {
-        // 🔧 修复：显示用户可见的Token过期提示
+    async function resetToPublicState(message) {
         if (message && message.trim() !== '') {
-            await customAlert(message, '登录状态');
+            await customAlert(message, '设置访问');
         }
-
-        cleanupDragState();
-
-        localStorage.removeItem('authToken');
-        isLoggedIn = false;
-        isAdmin = false;
-        removeMode = false;
-        isRemoveCategoryMode = false;
-        isEditCategoryMode = false;
-
-        updateLoginButton();
-        updateUIState();
-        links = publicLinks;
-        renderSections();
-
-        const addRemoveControls = document.querySelector('.add-remove-controls');
-        if (addRemoveControls) {
-            addRemoveControls.style.display = 'none';
-        }
-
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.style.display = 'none';
-        });
-
-        document.querySelectorAll('.delete-category-btn').forEach(btn => {
-            btn.style.display = 'none';
-        });
-
-        document.querySelectorAll('.edit-category-btn').forEach(btn => {
-            btn.style.display = 'none';
-        });
-
-        document.querySelectorAll('.move-category-btn').forEach(btn => {
-            btn.style.display = 'none';
-        });
-
-        // 重置分类管理按钮状态
-        const manageButton = document.querySelector('.category-manage-btn');
-        if (manageButton) {
-            manageButton.classList.remove('active');
-        }
-
-        const dialogOverlay = document.getElementById('dialog-overlay');
-        if (dialogOverlay) {
-            dialogOverlay.style.display = 'none';
-        }
-
-        const loginModal = document.getElementById('login-modal');
-        if (loginModal) {
-            loginModal.style.display = 'none';
-        }
-
-        // 确保按钮状态正确重置
-        const adminBtn = document.getElementById('admin-btn');
-        if (adminBtn) {
-            adminBtn.style.display = 'none';
-        }
+        window.location.href = '/';
     }
 
     // 自定义Alert对话框
@@ -4299,115 +4028,152 @@ async function resolveAutoFaviconCandidates(targetUrl) {
     return candidates;
 }
 
-// 常量时间比较函数，防止时序攻击
-function constantTimeCompare(a, b) {
-    if (a.length !== b.length) return false;
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-    }
-    return result === 0;
+function stripAdminPrefix(pathname) {
+    return pathname.replace(/^\/admin(?=\/|$)/, '') || '/';
 }
 
-// 服务端 token 验证
-async function validateServerToken(authToken, env) {
-    if (!authToken) {
+function decodeBase64Url(base64Url) {
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function decodeJwtSegment(segment) {
+    return JSON.parse(new TextDecoder().decode(decodeBase64Url(segment)));
+}
+
+function normalizeAccessDomain(teamDomain) {
+    const trimmed = (teamDomain || '').replace(/\/$/, '');
+    if (!trimmed) {
+        return '';
+    }
+    return /^https?:\/\//i.test(trimmed) ? trimmed : 'https://' + trimmed;
+}
+
+let accessCertCache = {
+    teamDomain: '',
+    fetchedAt: 0,
+    keys: []
+};
+
+async function getAccessSigningKeys(teamDomain) {
+    const normalizedTeamDomain = normalizeAccessDomain(teamDomain);
+    const isFresh = accessCertCache.teamDomain === normalizedTeamDomain && Date.now() - accessCertCache.fetchedAt < 5 * 60 * 1000;
+    if (isFresh && accessCertCache.keys.length > 0) {
+        return accessCertCache.keys;
+    }
+
+    const response = await fetch(normalizedTeamDomain + '/cdn-cgi/access/certs');
+    if (!response.ok) {
+        throw new Error('Unable to load Access certs');
+    }
+
+    const data = await response.json();
+    const keys = Array.isArray(data.keys) ? data.keys : [];
+    accessCertCache = {
+        teamDomain: normalizedTeamDomain,
+        fetchedAt: Date.now(),
+        keys
+    };
+    return keys;
+}
+
+async function verifyAccessRequest(request, env) {
+    const teamDomain = normalizeAccessDomain(env.TEAM_DOMAIN);
+    const policyAud = env.POLICY_AUD;
+
+    if (!teamDomain || !policyAud) {
         return {
             isValid: false,
-            status: 401,
-            response: { error: 'Unauthorized', message: '未登录或登录已过期' }
+            status: 500,
+            response: {
+                error: 'Access configuration missing',
+                message: 'Access 配置缺失'
+            }
+        };
+    }
+
+    const token = request.headers.get('Cf-Access-Jwt-Assertion');
+    if (!token) {
+        return {
+            isValid: false,
+            status: 403,
+            response: {
+                error: 'Missing Access token',
+                message: '需要 Cloudflare Access 登录'
+            }
         };
     }
 
     try {
-        const parts = authToken.split('.');
-        let timestamp, expiryMinutes, hash;
-
-        // 兼容新旧两种 token 格式
-        if (parts.length === 3) {
-            // 新格式：timestamp.expiryMinutes.hash
-            [timestamp, expiryMinutes, hash] = parts;
-            expiryMinutes = parseInt(expiryMinutes);
-            if (isNaN(expiryMinutes)) {
-                throw new Error('Invalid expiry format');
-            }
-        } else if (parts.length === 2) {
-            // 旧格式：timestamp.hash（向后兼容，使用默认30分钟）
-            [timestamp, hash] = parts;
-            const envExpiry = parseInt(env.TOKEN_EXPIRY_MINUTES);
-            expiryMinutes = isNaN(envExpiry) ? 30 : envExpiry;
-        } else {
-            throw new Error('Invalid token format');
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            throw new Error('Invalid JWT format');
         }
 
-        const tokenTimestamp = parseInt(timestamp);
-        const now = Date.now();
+        const [headerSegment, payloadSegment, signatureSegment] = parts;
+        const header = decodeJwtSegment(headerSegment);
+        const payload = decodeJwtSegment(payloadSegment);
 
-        // 计算过期时间：-1 表示永久有效
-        if (expiryMinutes !== -1) {
-            const expiryMs = expiryMinutes * 60 * 1000;
-            if (now - tokenTimestamp > expiryMs) {
-                return {
-                    isValid: false,
-                    status: 401,
-                    response: {
-                        error: 'Token expired',
-                        tokenExpired: true,
-                        message: '登录已过期，请重新登录'
-                    }
-                };
-            }
+        if (header.alg !== 'RS256' || !header.kid) {
+            throw new Error('Unsupported JWT header');
         }
 
-        // 根据 token 格式构建验证数据
-        const tokenData = parts.length === 3
-            ? timestamp + "_" + expiryMinutes + "_" + env.ADMIN_PASSWORD
-            : timestamp + "_" + env.ADMIN_PASSWORD;
-        const encoder = new TextEncoder();
-        const data = encoder.encode(tokenData);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const expectedHash = btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
-
-        // 使用常量时间比较防止时序攻击
-        if (!constantTimeCompare(hash, expectedHash)) {
-            return {
-                isValid: false,
-                status: 401,
-                response: {
-                    error: 'Invalid token',
-                    tokenInvalid: true,
-                    message: '登录状态无效，请重新登录'
-                }
-            };
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        if (payload.iss !== teamDomain) {
+            throw new Error('Invalid issuer');
+        }
+        if (payload.exp && nowSeconds >= payload.exp) {
+            throw new Error('Token expired');
+        }
+        if (payload.aud !== policyAud && !(Array.isArray(payload.aud) && payload.aud.includes(policyAud))) {
+            throw new Error('Invalid audience');
         }
 
-        return { isValid: true };
+        const keys = await getAccessSigningKeys(teamDomain);
+        const jwk = keys.find(key => key.kid === header.kid);
+        if (!jwk) {
+            throw new Error('Signing key not found');
+        }
+
+        const publicKey = await crypto.subtle.importKey(
+            'jwk',
+            jwk,
+            { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+            false,
+            ['verify']
+        );
+
+        const verified = await crypto.subtle.verify(
+            'RSASSA-PKCS1-v1_5',
+            publicKey,
+            decodeBase64Url(signatureSegment),
+            new TextEncoder().encode(headerSegment + '.' + payloadSegment)
+        );
+
+        if (!verified) {
+            throw new Error('Invalid signature');
+        }
+
+        return {
+            isValid: true,
+            payload
+        };
     } catch (error) {
-        // 避免泄露详细错误信息
         return {
             isValid: false,
-            status: 401,
+            status: 403,
             response: {
-                error: 'Invalid token',
-                tokenInvalid: true,
-                message: '登录验证失败，请重新登录'
+                error: 'Invalid Access token',
+                message: 'Cloudflare Access 验证失败'
             }
         };
     }
-}
-
-// 管理员权限验证函数
-async function validateAdminToken(authToken, env) {
-    const validation = await validateServerToken(authToken, env);
-    if (!validation.isValid) {
-        return validation;
-    }
-
-    // Token有效，确认管理员权限
-    return {
-        isValid: true,
-        isAdmin: true
-    };
 }
 
 function sanitizeLinkForPublic(link) {
@@ -4417,153 +4183,53 @@ function sanitizeLinkForPublic(link) {
 
 export default {
     async fetch(request, env) {
-      const url = new URL(request.url);
+        const url = new URL(request.url);
+        const isAdminPath = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+        const requestPath = stripAdminPrefix(url.pathname);
 
-      if (url.pathname === '/') {
-        return new Response(HTML_CONTENT, {
-          headers: { 'Content-Type': 'text/html' }
-        });
-      }
+        if (isAdminPath) {
+            const accessValidation = await verifyAccessRequest(request, env);
+            if (!accessValidation.isValid) {
+                return new Response(JSON.stringify(accessValidation.response), {
+                    status: accessValidation.status,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
 
-      if (url.pathname === '/api/getLinks') {
-        const userId = url.searchParams.get('userId');
-        const authToken = request.headers.get('Authorization');
-        const data = await env.CARD_ORDER.get(userId);
+        if (requestPath === '/') {
+            return new Response(HTML_CONTENT, {
+                headers: { 'Content-Type': 'text/html' }
+            });
+        }
 
-        if (data) {
-            const parsedData = JSON.parse(data);
+        if (requestPath === '/api/getLinks') {
+            const userId = url.searchParams.get('userId') || 'testUser';
+            const data = await env.CARD_ORDER.get(userId);
 
-            // 验证 token
-            if (authToken) {
-                const validation = await validateServerToken(authToken, env);
-                if (!validation.isValid) {
-                    return new Response(JSON.stringify(validation.response), {
-                        status: validation.status,
+            if (data) {
+                const parsedData = JSON.parse(data);
+
+                if (isAdminPath) {
+                    return new Response(JSON.stringify(parsedData), {
+                        status: 200,
                         headers: { 'Content-Type': 'application/json' }
                     });
                 }
 
-                // Token 有效，返回完整数据
-                return new Response(JSON.stringify(parsedData), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-
-            // 未提供 token，只返回公开数据
-            const filteredLinks = parsedData.links
-                .filter(link => !link.isPrivate)
-                .map(sanitizeLinkForPublic);
-            const filteredCategories = {};
-            Object.keys(parsedData.categories).forEach(category => {
-                filteredCategories[category] = parsedData.categories[category]
+                const filteredLinks = parsedData.links
                     .filter(link => !link.isPrivate)
                     .map(sanitizeLinkForPublic);
-            });
-
-            return new Response(JSON.stringify({
-                links: filteredLinks,
-                categories: filteredCategories
-            }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        return new Response(JSON.stringify({
-            links: [],
-            categories: {}
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      if (url.pathname === '/api/favicon') {
-        const targetUrl = url.searchParams.get('url');
-        if (!targetUrl) {
-          return new Response('Missing url', { status: 400 });
-        }
-
-        try {
-          const candidates = await resolveAutoFaviconCandidates(targetUrl);
-          for (const faviconUrl of candidates) {
-            try {
-              const upstream = await fetch(faviconUrl);
-              const contentType = upstream.headers.get('content-type') || '';
-              if (upstream.ok && contentType.startsWith('image/')) {
-                return new Response(upstream.body, {
-                  status: 200,
-                  headers: {
-                    'Content-Type': contentType,
-                    'Cache-Control': 'public, max-age=86400'
-                  }
+                const filteredCategories = {};
+                Object.keys(parsedData.categories).forEach(category => {
+                    filteredCategories[category] = parsedData.categories[category]
+                        .filter(link => !link.isPrivate)
+                        .map(sanitizeLinkForPublic);
                 });
-              }
-            } catch {
-              // Try the next candidate.
-            }
-          }
-          return new Response('Favicon unavailable', { status: 404 });
-        } catch {
-          return new Response('Favicon unavailable', { status: 404 });
-        }
-      }
-
-      if (url.pathname === '/api/saveOrder' && request.method === 'POST') {
-        const authToken = request.headers.get('Authorization');
-        const validation = await validateServerToken(authToken, env);
-
-        if (!validation.isValid) {
-            return new Response(JSON.stringify(validation.response), {
-                status: validation.status,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        const { userId, links, categories } = await request.json();
-        await env.CARD_ORDER.put(userId, JSON.stringify({ links, categories }));
-        return new Response(JSON.stringify({
-            success: true,
-            message: '保存成功'
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      if (url.pathname === '/api/verifyPassword' && request.method === 'POST') {
-        try {
-            const body = await request.json();
-            const { password, expiryMinutes: clientExpiry } = body;
-            const isValid = password === env.ADMIN_PASSWORD;
-
-            if (isValid) {
-                // 允许的有效期白名单（分钟）：15分钟、1小时、1天、7天、30天、永久
-                const ALLOWED_EXPIRY_VALUES = [15, 60, 1440, 10080, 43200, -1];
-                const configuredExpiry = parseInt(env.TOKEN_EXPIRY_MINUTES);
-                const defaultExpiry = Number.isInteger(configuredExpiry) ? configuredExpiry : -1;
-
-                // 验证客户端传入的有效期是否在白名单中
-                let expiryMinutes = defaultExpiry;
-                if (typeof clientExpiry === 'number' && Number.isInteger(clientExpiry) && ALLOWED_EXPIRY_VALUES.includes(clientExpiry)) {
-                    expiryMinutes = clientExpiry;
-                }
-
-                // 生成包含时间戳和有效期的加密 token
-                const timestamp = Date.now();
-                const tokenData = timestamp + "_" + expiryMinutes + "_" + env.ADMIN_PASSWORD;
-                const encoder = new TextEncoder();
-                const data = encoder.encode(tokenData);
-                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-
-                // 使用指定格式：timestamp.expiryMinutes.hash
-                const token = timestamp + "." + expiryMinutes + "." + btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
 
                 return new Response(JSON.stringify({
-                    valid: true,
-                    token: token,
-                    expiryMinutes: expiryMinutes
+                    links: filteredLinks,
+                    categories: filteredCategories
                 }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
@@ -4571,55 +4237,97 @@ export default {
             }
 
             return new Response(JSON.stringify({
-                valid: false,
-                error: 'Invalid password'
+                links: [],
+                categories: {}
             }), {
-                status: 403,
+                status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
-        } catch (error) {
+        }
+
+        if (requestPath === '/api/favicon') {
+            const targetUrl = url.searchParams.get('url');
+            if (!targetUrl) {
+                return new Response('Missing url', { status: 400 });
+            }
+
+            try {
+                const candidates = await resolveAutoFaviconCandidates(targetUrl);
+                for (const faviconUrl of candidates) {
+                    try {
+                        const upstream = await fetch(faviconUrl);
+                        const contentType = upstream.headers.get('content-type') || '';
+                        if (upstream.ok && contentType.startsWith('image/')) {
+                            return new Response(upstream.body, {
+                                status: 200,
+                                headers: {
+                                    'Content-Type': contentType,
+                                    'Cache-Control': 'public, max-age=86400'
+                                }
+                            });
+                        }
+                    } catch {
+                        // Try the next candidate.
+                    }
+                }
+                return new Response('Favicon unavailable', { status: 404 });
+            } catch {
+                return new Response('Favicon unavailable', { status: 404 });
+            }
+        }
+
+        if (requestPath === '/api/saveOrder' && request.method === 'POST') {
+            if (!isAdminPath) {
+                return new Response(JSON.stringify({
+                    error: 'Forbidden',
+                    message: '需要进入设置模式'
+                }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            const { userId, links, categories } = await request.json();
+            await env.CARD_ORDER.put(userId, JSON.stringify({ links, categories }));
             return new Response(JSON.stringify({
-                valid: false,
-                error: error.message
+                success: true,
+                message: '保存成功'
             }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-      }
-
-      if (url.pathname === '/api/backupData' && request.method === 'POST') {
-        // 🔧 安全修复：添加管理员权限验证
-        const authToken = request.headers.get('Authorization');
-        const validation = await validateAdminToken(authToken, env);
-
-        if (!validation.isValid) {
-            return new Response(JSON.stringify(validation.response), {
-                status: validation.status,
+                status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        try {
-            const { sourceUserId } = await request.json();
-            const result = await this.backupData(env, sourceUserId);
-            return new Response(JSON.stringify(result), {
-              status: result.success ? 200 : 404,
-              headers: { 'Content-Type': 'application/json' }
-            });
-        } catch (error) {
-            // 避免泄露详细错误信息
-            return new Response(JSON.stringify({
-                success: false,
-                message: '备份操作失败'
-            }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-      }
+        if (requestPath === '/api/backupData' && request.method === 'POST') {
+            if (!isAdminPath) {
+                return new Response(JSON.stringify({
+                    error: 'Forbidden',
+                    message: '需要进入设置模式'
+                }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
 
-      return new Response('Not Found', { status: 404 });
+            try {
+                const { sourceUserId } = await request.json();
+                const result = await this.backupData(env, sourceUserId);
+                return new Response(JSON.stringify(result), {
+                    status: result.success ? 200 : 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (error) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    message: '备份操作失败'
+                }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+        return new Response('Not Found', { status: 404 });
     },
 
     async backupData(env, sourceUserId) {
