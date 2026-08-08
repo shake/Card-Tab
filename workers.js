@@ -1808,6 +1808,7 @@ const HTML_CONTENT = `
 
     // 只在确认可访问 /admin 接口后才认为已登录，避免把路由误当成登录态。
     let isLoggedIn = false;
+    let hasCheckedAdminAccess = !isAdminRoute;
 
     // 全局变量
     let publicLinks = [];
@@ -2105,6 +2106,7 @@ const HTML_CONTENT = `
                 Object.assign(categories, data.categories);
             }
 
+            hasCheckedAdminAccess = true;
             isLoggedIn = isAdminRoute;
             publicLinks = data.links ? data.links.filter(link => !link.isPrivate) : [];
             privateLinks = data.links ? data.links.filter(link => link.isPrivate) : [];
@@ -2998,6 +3000,14 @@ const HTML_CONTENT = `
         const loginBtn = document.getElementById('login-btn');
         const adminBtn = document.getElementById('admin-btn');
 
+        if (isAdminRoute && !hasCheckedAdminAccess) {
+            loginBtn.textContent = '';
+            loginBtn.style.display = 'none';
+            adminBtn.style.display = 'none';
+            return;
+        }
+
+        loginBtn.style.display = 'inline-block';
         if (isAdminRoute && isLoggedIn) {
             loginBtn.textContent = '退出设置';
             adminBtn.style.display = 'inline-block';
@@ -3749,7 +3759,6 @@ const HTML_CONTENT = `
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             applyTheme(currentTheme);
-            await validateToken();
             updateLoginButton();
             currentCategoryView = readCategoryViewFromHash();
             await loadLinks();
