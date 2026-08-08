@@ -1806,7 +1806,8 @@ const HTML_CONTENT = `
     const isAdminRoute = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
     const apiBasePath = isAdminRoute ? '/admin' : '';
 
-    let isLoggedIn = isAdminRoute;
+    // 只在确认可访问 /admin 接口后才认为已登录，避免把路由误当成登录态。
+    let isLoggedIn = false;
 
     // 全局变量
     let publicLinks = [];
@@ -2104,6 +2105,7 @@ const HTML_CONTENT = `
                 Object.assign(categories, data.categories);
             }
 
+            isLoggedIn = isAdminRoute;
             publicLinks = data.links ? data.links.filter(link => !link.isPrivate) : [];
             privateLinks = data.links ? data.links.filter(link => link.isPrivate) : [];
             links = isLoggedIn ? [...publicLinks, ...privateLinks] : publicLinks;
@@ -2988,11 +2990,7 @@ const HTML_CONTENT = `
 
     // 处理登录按钮点击
     async function handleLoginClick() {
-        if (isLoggedIn) {
-            window.location.href = '/';
-        } else {
-            window.location.href = '/admin';
-        }
+        window.location.href = isAdminRoute ? '/' : '/admin';
     }
 
     // 更新按钮状态
@@ -3000,7 +2998,7 @@ const HTML_CONTENT = `
         const loginBtn = document.getElementById('login-btn');
         const adminBtn = document.getElementById('admin-btn');
 
-        if (isLoggedIn) {
+        if (isAdminRoute && isLoggedIn) {
             loginBtn.textContent = '退出设置';
             adminBtn.style.display = 'inline-block';
             if (isAdmin) {
@@ -3771,7 +3769,7 @@ const HTML_CONTENT = `
 
 
     async function validateToken() {
-        return isLoggedIn;
+        return isAdminRoute && isLoggedIn;
     }
 
     async function resetToPublicState(message) {
